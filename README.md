@@ -1,6 +1,6 @@
-# Welcome to your Expo app 👋
+# Rydian
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A reading tracker and book social app powered by the Hardcover API.
 
 ## Get started
 
@@ -10,11 +10,28 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Start the app with clean cache (recommended)
 
    ```bash
-   npx expo start
+   npm run start:clean
    ```
+
+   Or use standard start:
+
+   ```bash
+   npm start
+   ```
+
+## Troubleshooting
+
+If you see the Expo default "Edit app/index.tsx" screen instead of the actual app, see **[DEV_SETUP.md](./DEV_SETUP.md)** for detailed troubleshooting steps.
+
+**Quick fix:**
+```bash
+# Stop the dev server (Ctrl+C)
+# Clear Metro cache and restart
+npx expo start -c
+```
 
 In the output, you'll find options to open the app in a
 
