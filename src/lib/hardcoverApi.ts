@@ -21,7 +21,9 @@ export interface Book {
 export interface UserBook {
   id: number;
   status_id: number;
-  progress?: number;
+  progress_percentage?: number;
+  current_page?: number;
+  pages_read?: number;
   book: Book;
 }
 
@@ -134,18 +136,28 @@ export async function validateApiKey(apiKey: string): Promise<ValidationResult> 
  * Gets the current user's profile
  */
 export async function getCurrentUser(apiKey: string): Promise<User> {
-  const query = `
-    query {
-      me {
-        id
-        name
-        username
+  try {
+    const query = `
+      query {
+        me {
+          id
+          name
+          username
+        }
       }
-    }
-  `;
+    `;
 
-  const data = await makeGraphQLRequest<{ me: User }>(query, apiKey);
-  return data.me;
+    const data = await makeGraphQLRequest<{ me: User }>(query, apiKey);
+
+    if (!data?.me) {
+      throw new Error('User data not found');
+    }
+
+    return data.me;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    throw error; // Re-throw for user profile as it's critical
+  }
 }
 
 /**
@@ -153,31 +165,39 @@ export async function getCurrentUser(apiKey: string): Promise<User> {
  * Status ID 2 = Currently Reading
  */
 export async function getCurrentlyReading(apiKey: string): Promise<UserBook | null> {
-  const query = `
-    query {
-      me {
-        user_books(where: {status_id: {_eq: 2}}, limit: 1) {
-          id
-          status_id
-          progress
-          book {
+  try {
+    const query = `
+      query {
+        me {
+          user_books(where: {status_id: {_eq: 2}}, limit: 1) {
             id
-            title
-            subtitle
-            image
-            contributions {
-              author {
-                name
+            status_id
+            progress_percentage
+            current_page
+            pages_read
+            book {
+              id
+              title
+              subtitle
+              image
+              contributions {
+                author {
+                  name
+                }
               }
             }
           }
         }
       }
-    }
-  `;
+    `;
 
-  const data = await makeGraphQLRequest<{ me: { user_books: UserBook[] } }>(query, apiKey);
-  return data.me.user_books.length > 0 ? data.me.user_books[0] : null;
+    const data = await makeGraphQLRequest<{ me: { user_books: UserBook[] } }>(query, apiKey);
+    return data.me?.user_books?.length > 0 ? data.me.user_books[0] : null;
+  } catch (error) {
+    console.error('Error fetching currently reading:', error);
+    // Return null instead of throwing to prevent app crashes
+    return null;
+  }
 }
 
 /**
@@ -185,58 +205,70 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
  * Status ID 1 = Want to Read
  */
 export async function getWantToRead(apiKey: string): Promise<UserBook[]> {
-  const query = `
-    query {
-      me {
-        user_books(where: {status_id: {_eq: 1}}, order_by: {created_at: desc}) {
-          id
-          status_id
-          book {
+  try {
+    const query = `
+      query {
+        me {
+          user_books(where: {status_id: {_eq: 1}}, order_by: {created_at: desc}) {
             id
-            title
-            subtitle
-            image
-            contributions {
-              author {
-                name
+            status_id
+            book {
+              id
+              title
+              subtitle
+              image
+              contributions {
+                author {
+                  name
+                }
               }
             }
           }
         }
       }
-    }
-  `;
+    `;
 
-  const data = await makeGraphQLRequest<{ me: { user_books: UserBook[] } }>(query, apiKey);
-  return data.me.user_books;
+    const data = await makeGraphQLRequest<{ me: { user_books: UserBook[] } }>(query, apiKey);
+    return data.me?.user_books || [];
+  } catch (error) {
+    console.error('Error fetching want to read list:', error);
+    // Return empty array instead of throwing to prevent app crashes
+    return [];
+  }
 }
 
 /**
  * Searches for books by query string
  */
 export async function searchBooks(query: string, apiKey: string): Promise<Book[]> {
-  const graphqlQuery = `
-    query SearchBooks($query: String!) {
-      books(where: {_or: [{title: {_ilike: $query}}, {subtitle: {_ilike: $query}}]}, limit: 20) {
-        id
-        title
-        subtitle
-        image
-        contributions {
-          author {
-            name
+  try {
+    const graphqlQuery = `
+      query SearchBooks($query: String!) {
+        books(where: {_or: [{title: {_ilike: $query}}, {subtitle: {_ilike: $query}}]}, limit: 20) {
+          id
+          title
+          subtitle
+          image
+          contributions {
+            author {
+              name
+            }
           }
         }
       }
-    }
-  `;
+    `;
 
-  const data = await makeGraphQLRequest<{ books: Book[] }>(
-    graphqlQuery,
-    apiKey,
-    { query: `%${query}%` }
-  );
-  return data.books;
+    const data = await makeGraphQLRequest<{ books: Book[] }>(
+      graphqlQuery,
+      apiKey,
+      { query: `%${query}%` }
+    );
+    return data.books || [];
+  } catch (error) {
+    console.error('Error searching books:', error);
+    // Return empty array instead of throwing to prevent app crashes
+    return [];
+  }
 }
 
 /**
@@ -256,4 +288,24 @@ export function getBookAuthors(book: Book): string {
   } else {
     return `${authors[0]} and ${authors.length - 1} others`;
   }
+}
+
+/**
+ * Helper function to get reading progress text from a user book
+ * Returns formatted progress string or null if no progress data available
+ */
+export function getReadingProgress(userBook: UserBook): string | null {
+  if (userBook.progress_percentage !== null && userBook.progress_percentage !== undefined) {
+    return `${userBook.progress_percentage}%`;
+  }
+
+  if (userBook.current_page !== null && userBook.current_page !== undefined) {
+    return `Page ${userBook.current_page}`;
+  }
+
+  if (userBook.pages_read !== null && userBook.pages_read !== undefined && userBook.pages_read > 0) {
+    return `${userBook.pages_read} pages read`;
+  }
+
+  return null;
 }

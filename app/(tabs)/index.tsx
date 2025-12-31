@@ -3,7 +3,7 @@ import { StyleSheet, ActivityIndicator, View, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCurrentUser, getCurrentlyReading, getBookAuthors, User, UserBook } from '@/src/lib/hardcoverApi';
+import { getCurrentUser, getCurrentlyReading, getBookAuthors, getReadingProgress, User, UserBook } from '@/src/lib/hardcoverApi';
 
 const STORAGE_KEY_API = '@rydian_api_key';
 
@@ -29,17 +29,30 @@ export default function HomeScreen() {
         return;
       }
 
-      // Fetch user and currently reading book in parallel
-      const [userData, currentlyReadingData] = await Promise.all([
-        getCurrentUser(apiKey),
-        getCurrentlyReading(apiKey),
-      ]);
+      // Fetch user data first (critical)
+      let userData: User | null = null;
+      try {
+        userData = await getCurrentUser(apiKey);
+        setUser(userData);
+      } catch (err) {
+        console.error('Error loading user profile:', err);
+        setError('Failed to load your profile. Please check your connection.');
+        setIsLoading(false);
+        return;
+      }
 
-      setUser(userData);
-      setCurrentlyReading(currentlyReadingData);
+      // Fetch currently reading book (non-critical - don't fail if this errors)
+      try {
+        const currentlyReadingData = await getCurrentlyReading(apiKey);
+        setCurrentlyReading(currentlyReadingData);
+      } catch (err) {
+        console.error('Error loading currently reading book:', err);
+        // Don't set error state - just log and continue with null
+        setCurrentlyReading(null);
+      }
     } catch (err) {
       console.error('Error loading user data:', err);
-      setError('Failed to load your reading data');
+      setError('Failed to load your reading data. Please check your connection.');
     } finally {
       setIsLoading(false);
     }
@@ -84,11 +97,14 @@ export default function HomeScreen() {
               <ThemedText style={styles.bookAuthor}>
                 by {getBookAuthors(currentlyReading.book)}
               </ThemedText>
-              {currentlyReading.progress !== null && currentlyReading.progress !== undefined && (
-                <ThemedText style={styles.progressText}>
-                  Progress: {currentlyReading.progress}%
-                </ThemedText>
-              )}
+              {(() => {
+                const progress = getReadingProgress(currentlyReading);
+                return progress ? (
+                  <ThemedText style={styles.progressText}>
+                    Progress: {progress}
+                  </ThemedText>
+                ) : null;
+              })()}
             </View>
           </View>
         ) : (
