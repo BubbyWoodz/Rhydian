@@ -24,7 +24,6 @@ export interface Book {
 export interface UserBook {
   id: number;
   status_id: number;
-  current_page?: number;
   pages_read?: number;
   book: Book;
 }
@@ -174,7 +173,6 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
           user_books(where: {status_id: {_eq: 2}}, limit: 1) {
             id
             status_id
-            current_page
             pages_read
             book {
               id
@@ -309,11 +307,6 @@ export function getReadingProgress(userBook: UserBook): string | null {
   ) {
     const percentage = Math.round((userBook.pages_read / userBook.book.edition.pages) * 100);
     return `${percentage}%`;
-  }
-
-  // Fall back to current page if available
-  if (userBook.current_page !== null && userBook.current_page !== undefined) {
-    return `Page ${userBook.current_page}`;
   }
 
   // Fall back to raw pages read
