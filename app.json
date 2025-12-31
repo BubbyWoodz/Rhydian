@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.Rhydian",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -51,6 +55,12 @@
         "projectId": "2a1441fd-7498-4379-a488-522fb366febd"
       }
     },
-    "owner": "bu88yw00dz"
+    "owner": "bu88yw00dz",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2a1441fd-7498-4379-a488-522fb366febd"
+    }
   }
 }
