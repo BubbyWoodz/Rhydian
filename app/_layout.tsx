@@ -28,8 +28,8 @@ export default function RootLayout() {
     if (!isOnboardingComplete && !inOnboarding) {
       // User hasn't completed onboarding, redirect to welcome
       router.replace('/(onboarding)/welcome');
-    } else if (isOnboardingComplete && !inTabs) {
-      // User has completed onboarding, redirect to tabs
+    } else if (isOnboardingComplete && inOnboarding) {
+      // User has completed onboarding but still in onboarding screens, redirect to tabs
       router.replace('/(tabs)');
     }
   }, [isOnboardingComplete, segments]);
