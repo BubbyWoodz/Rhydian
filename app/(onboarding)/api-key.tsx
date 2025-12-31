@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { validateApiKey } from '@/src/lib/hardcoverApi';
 
 const STORAGE_KEYS = {
   API_KEY: '@rydian_api_key',
@@ -18,16 +19,13 @@ export default function ApiKeyScreen() {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateApiKey = (key: string): boolean => {
-    // Placeholder validation - just check if it's not empty and has reasonable length
-    return key.trim().length > 10;
-  };
-
   const handleContinue = async () => {
-    if (!validateApiKey(apiKey)) {
+    const trimmedKey = apiKey.trim();
+
+    if (!trimmedKey) {
       Alert.alert(
         'Invalid API Key',
-        'Please enter a valid Hardcover API key. It should be at least 10 characters long.',
+        'Please enter your Hardcover API key.',
         [{ text: 'OK' }]
       );
       return;
@@ -35,17 +33,33 @@ export default function ApiKeyScreen() {
 
     setIsLoading(true);
     try {
+      // Validate the API key by making a real API call
+      const isValid = await validateApiKey(trimmedKey);
+
+      if (!isValid) {
+        Alert.alert(
+          'Invalid API Key',
+          'The API key you entered is not valid. Please check and try again.',
+          [{ text: 'OK' }]
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Save the API key and mark onboarding as complete
       await AsyncStorage.multiSet([
-        [STORAGE_KEYS.API_KEY, apiKey.trim()],
+        [STORAGE_KEYS.API_KEY, trimmedKey],
         [STORAGE_KEYS.ONBOARDING_COMPLETE, 'true'],
       ]);
 
       // Navigate to tabs
       router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Error', 'Failed to save API key. Please try again.');
-      console.error('Error saving API key:', error);
-    } finally {
+      Alert.alert(
+        'Error',
+        'Failed to validate API key. Please check your internet connection and try again.'
+      );
+      console.error('Error validating API key:', error);
       setIsLoading(false);
     }
   };
@@ -102,7 +116,7 @@ export default function ApiKeyScreen() {
         onPress={handleContinue}
         disabled={isLoading}>
         <ThemedText style={styles.buttonText}>
-          {isLoading ? 'Saving...' : 'Continue'}
+          {isLoading ? 'Validating...' : 'Continue'}
         </ThemedText>
       </Pressable>
     </ThemedView>
