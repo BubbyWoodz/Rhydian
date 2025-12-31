@@ -24,7 +24,6 @@ export interface Book {
 export interface UserBook {
   id: number;
   status_id: number;
-  pages_read?: number;
   book: Book;
 }
 
@@ -173,7 +172,6 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
           user_books(where: {status_id: {_eq: 2}}, limit: 1) {
             id
             status_id
-            pages_read
             book {
               id
               title
@@ -294,25 +292,11 @@ export function getBookAuthors(book: Book): string {
 
 /**
  * Helper function to get reading progress text from a user book
- * Returns formatted progress string or null if no progress data available
- * Computes percentage client-side from pages_read / edition.pages
+ * Returns null as the Hardcover API does not expose user progress fields
+ * (pages_read, current_page, progress_percentage) on user_books
  */
 export function getReadingProgress(userBook: UserBook): string | null {
-  // Calculate percentage if we have both pages_read and total pages
-  if (
-    userBook.pages_read !== null &&
-    userBook.pages_read !== undefined &&
-    userBook.pages_read > 0 &&
-    userBook.book.edition?.pages
-  ) {
-    const percentage = Math.round((userBook.pages_read / userBook.book.edition.pages) * 100);
-    return `${percentage}%`;
-  }
-
-  // Fall back to raw pages read
-  if (userBook.pages_read !== null && userBook.pages_read !== undefined && userBook.pages_read > 0) {
-    return `${userBook.pages_read} pages read`;
-  }
-
+  // No user progress data available in the API schema
+  // user_books does not expose: pages_read, current_page, or progress_percentage
   return null;
 }
