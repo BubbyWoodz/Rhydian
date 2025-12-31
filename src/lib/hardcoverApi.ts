@@ -6,11 +6,16 @@ export interface User {
   username: string;
 }
 
+export interface BookImage {
+  url: string;
+  is_primary?: boolean;
+}
+
 export interface Book {
   id: number;
   title: string;
   subtitle?: string;
-  image?: string;
+  images?: BookImage[];
   contributions?: Array<{
     author: {
       name: string;
@@ -184,7 +189,10 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
               id
               title
               subtitle
-              image
+              images {
+                url
+                is_primary
+              }
               edition {
                 pages
               }
@@ -229,7 +237,10 @@ export async function getWantToRead(apiKey: string): Promise<UserBook[]> {
               id
               title
               subtitle
-              image
+              images {
+                url
+                is_primary
+              }
               contributions {
                 author {
                   name
@@ -261,7 +272,10 @@ export async function searchBooks(query: string, apiKey: string): Promise<Book[]
           id
           title
           subtitle
-          image
+          images {
+            url
+            is_primary
+          }
           contributions {
             author {
               name
@@ -282,6 +296,25 @@ export async function searchBooks(query: string, apiKey: string): Promise<Book[]
     // Return empty array instead of throwing to prevent app crashes
     return [];
   }
+}
+
+/**
+ * Helper function to get the primary book cover image URL
+ * Returns the primary image URL or the first image URL if no primary, or null if no images
+ */
+export function getBookCoverUrl(book: Book): string | null {
+  if (!book.images || book.images.length === 0) {
+    return null;
+  }
+
+  // Try to find the primary image
+  const primaryImage = book.images.find((img) => img.is_primary);
+  if (primaryImage) {
+    return primaryImage.url;
+  }
+
+  // Fall back to the first image
+  return book.images[0].url;
 }
 
 /**
