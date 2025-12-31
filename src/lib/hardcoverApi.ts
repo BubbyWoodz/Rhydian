@@ -42,6 +42,7 @@ async function makeGraphQLRequest<T>(
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
+      'x-hasura-role': 'user',
     },
     body: JSON.stringify({
       query,
@@ -62,25 +63,70 @@ async function makeGraphQLRequest<T>(
   return result.data;
 }
 
+export interface ValidationResult {
+  isValid: boolean;
+  errorMessage?: string;
+}
+
 /**
  * Validates an API key by attempting to fetch the current user
- * Returns true if valid, false otherwise
+ * Returns validation result with error message if invalid
  */
-export async function validateApiKey(apiKey: string): Promise<boolean> {
+export async function validateApiKey(apiKey: string): Promise<ValidationResult> {
   try {
     const query = `
-      query {
+      query ValidateToken {
         me {
           id
+          name
+          username
         }
       }
     `;
 
-    await makeGraphQLRequest(query, apiKey);
-    return true;
+    const response = await fetch(HARDCOVER_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+        'x-hasura-role': 'user',
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      return {
+        isValid: false,
+        errorMessage: `Authentication failed: ${response.status} ${response.statusText}`,
+      };
+    }
+
+    const result = await response.json();
+
+    // Check for GraphQL errors
+    if (result.errors && result.errors.length > 0) {
+      const errorMessage = result.errors[0]?.message || 'Authentication failed';
+      return {
+        isValid: false,
+        errorMessage,
+      };
+    }
+
+    // Check if me data exists
+    if (!result.data?.me) {
+      return {
+        isValid: false,
+        errorMessage: 'Invalid API key: Unable to authenticate user',
+      };
+    }
+
+    return { isValid: true };
   } catch (error) {
-    console.error('API key validation failed:', error);
-    return false;
+    console.error('API key validation error:', error);
+    return {
+      isValid: false,
+      errorMessage: error instanceof Error ? error.message : 'Network error occurred',
+    };
   }
 }
 

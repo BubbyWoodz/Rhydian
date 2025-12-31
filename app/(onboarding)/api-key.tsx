@@ -33,13 +33,14 @@ export default function ApiKeyScreen() {
 
     setIsLoading(true);
     try {
-      // Validate the API key by making a real API call
-      const isValid = await validateApiKey(trimmedKey);
+      // Validate the API key by making a real API call to Hardcover
+      const validationResult = await validateApiKey(trimmedKey);
 
-      if (!isValid) {
+      if (!validationResult.isValid) {
+        // Show the actual error message from the API
         Alert.alert(
           'Invalid API Key',
-          'The API key you entered is not valid. Please check and try again.',
+          validationResult.errorMessage || 'The API key you entered is not valid. Please check and try again.',
           [{ text: 'OK' }]
         );
         setIsLoading(false);
