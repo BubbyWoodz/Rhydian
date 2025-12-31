@@ -2,12 +2,12 @@ import { StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
-export default function HomeScreen() {
+export default function ProfileScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Home</ThemedText>
+      <ThemedText type="title">Profile</ThemedText>
       <ThemedText style={styles.description}>
-        Your reading activity and updates will appear here.
+        Your profile and settings will appear here.
       </ThemedText>
     </ThemedView>
   );
