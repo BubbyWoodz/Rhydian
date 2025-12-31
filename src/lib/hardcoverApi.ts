@@ -21,10 +21,17 @@ export interface Book {
   };
 }
 
+export interface UserBookRead {
+  progress?: number;
+  progress_pages?: number;
+  progress_seconds?: number;
+}
+
 export interface UserBook {
   id: number;
   status_id: number;
   book: Book;
+  user_book_reads?: UserBookRead[];
 }
 
 export interface SearchResult {
@@ -163,6 +170,7 @@ export async function getCurrentUser(apiKey: string): Promise<User> {
 /**
  * Gets the user's currently reading book (first one if multiple)
  * Status ID 2 = Currently Reading
+ * Progress is fetched from user_book_reads table, not user_books
  */
 export async function getCurrentlyReading(apiKey: string): Promise<UserBook | null> {
   try {
@@ -185,6 +193,11 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
                   name
                 }
               }
+            }
+            user_book_reads(order_by: {created_at: desc}, limit: 1) {
+              progress
+              progress_pages
+              progress_seconds
             }
           }
         }
@@ -292,11 +305,33 @@ export function getBookAuthors(book: Book): string {
 
 /**
  * Helper function to get reading progress text from a user book
- * Returns null as the Hardcover API does not expose user progress fields
- * (pages_read, current_page, progress_percentage) on user_books
+ * Progress is stored in user_book_reads table, not on user_books
+ * Returns formatted progress string or null if no progress data available
  */
 export function getReadingProgress(userBook: UserBook): string | null {
-  // No user progress data available in the API schema
-  // user_books does not expose: pages_read, current_page, or progress_percentage
+  // Get the latest user_book_read entry
+  const latestRead = userBook.user_book_reads?.[0];
+
+  if (!latestRead) {
+    return null;
+  }
+
+  // Priority 1: Use progress field directly if it exists (already a percentage)
+  if (latestRead.progress !== null && latestRead.progress !== undefined) {
+    return `${Math.round(latestRead.progress)}%`;
+  }
+
+  // Priority 2: Calculate from progress_pages and edition.pages
+  if (
+    latestRead.progress_pages !== null &&
+    latestRead.progress_pages !== undefined &&
+    latestRead.progress_pages > 0 &&
+    userBook.book.edition?.pages
+  ) {
+    const percentage = Math.round((latestRead.progress_pages / userBook.book.edition.pages) * 100);
+    return `${percentage}%`;
+  }
+
+  // No usable progress data
   return null;
 }
