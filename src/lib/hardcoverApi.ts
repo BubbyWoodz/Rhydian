@@ -16,12 +16,14 @@ export interface Book {
       name: string;
     };
   }>;
+  edition?: {
+    pages?: number;
+  };
 }
 
 export interface UserBook {
   id: number;
   status_id: number;
-  progress_percentage?: number;
   current_page?: number;
   pages_read?: number;
   book: Book;
@@ -172,7 +174,6 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
           user_books(where: {status_id: {_eq: 2}}, limit: 1) {
             id
             status_id
-            progress_percentage
             current_page
             pages_read
             book {
@@ -180,6 +181,9 @@ export async function getCurrentlyReading(apiKey: string): Promise<UserBook | nu
               title
               subtitle
               image
+              edition {
+                pages
+              }
               contributions {
                 author {
                   name
@@ -293,16 +297,26 @@ export function getBookAuthors(book: Book): string {
 /**
  * Helper function to get reading progress text from a user book
  * Returns formatted progress string or null if no progress data available
+ * Computes percentage client-side from pages_read / edition.pages
  */
 export function getReadingProgress(userBook: UserBook): string | null {
-  if (userBook.progress_percentage !== null && userBook.progress_percentage !== undefined) {
-    return `${userBook.progress_percentage}%`;
+  // Calculate percentage if we have both pages_read and total pages
+  if (
+    userBook.pages_read !== null &&
+    userBook.pages_read !== undefined &&
+    userBook.pages_read > 0 &&
+    userBook.book.edition?.pages
+  ) {
+    const percentage = Math.round((userBook.pages_read / userBook.book.edition.pages) * 100);
+    return `${percentage}%`;
   }
 
+  // Fall back to current page if available
   if (userBook.current_page !== null && userBook.current_page !== undefined) {
     return `Page ${userBook.current_page}`;
   }
 
+  // Fall back to raw pages read
   if (userBook.pages_read !== null && userBook.pages_read !== undefined && userBook.pages_read > 0) {
     return `${userBook.pages_read} pages read`;
   }
