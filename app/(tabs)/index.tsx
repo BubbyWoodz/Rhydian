@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, ActivityIndicator, View, ScrollView } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getCurrentUser, getCurrentlyReading, getBookAuthors, getReadingProgress, User, UserBook } from '@/src/lib/hardcoverApi';
+import { getCurrentUser, getCurrentlyReading, getBookAuthors, getBookCoverUrl, getReadingProgress, User, UserBook } from '@/src/lib/hardcoverApi';
 
 const STORAGE_KEY_API = '@rydian_api_key';
 
@@ -91,20 +92,36 @@ export default function HomeScreen() {
               Currently Reading
             </ThemedText>
             <View style={styles.bookCard}>
-              <ThemedText style={styles.bookTitle}>
-                {currentlyReading.book.title}
-              </ThemedText>
-              <ThemedText style={styles.bookAuthor}>
-                by {getBookAuthors(currentlyReading.book)}
-              </ThemedText>
               {(() => {
-                const progress = getReadingProgress(currentlyReading);
-                return progress ? (
-                  <ThemedText style={styles.progressText}>
-                    Progress: {progress}
-                  </ThemedText>
+                const coverUrl = getBookCoverUrl(currentlyReading.book);
+                return coverUrl ? (
+                  <Image
+                    source={{ uri: coverUrl }}
+                    style={styles.bookCover}
+                    contentFit="cover"
+                  />
                 ) : null;
               })()}
+              <View style={styles.bookInfo}>
+                <ThemedText style={styles.bookTitle}>
+                  {currentlyReading.book.title}
+                </ThemedText>
+                <ThemedText style={styles.bookAuthor}>
+                  by {getBookAuthors(currentlyReading.book)}
+                </ThemedText>
+                {(() => {
+                  const progress = getReadingProgress(currentlyReading);
+                  return progress ? (
+                    <ThemedText style={styles.progressText}>
+                      Progress: {progress}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText style={styles.progressText}>
+                      Not started
+                    </ThemedText>
+                  );
+                })()}
+              </View>
             </View>
           </View>
         ) : (
@@ -159,16 +176,27 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 12,
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    flexDirection: 'row',
+    gap: 16,
+  },
+  bookCover: {
+    width: 80,
+    height: 120,
+    borderRadius: 8,
+  },
+  bookInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
   bookTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   bookAuthor: {
-    fontSize: 16,
+    fontSize: 15,
     opacity: 0.7,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   progressText: {
     fontSize: 14,
